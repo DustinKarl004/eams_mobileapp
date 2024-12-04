@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "eas_mobile",
+    "slug": "eas_mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./Picture/cdm_logo.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./Picture/cdm_logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app needs access to the camera to take photos.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to select and upload images."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./Picture/cdm_logo.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "INTERNET",
+        "MANAGE_EXTERNAL_STORAGE"
+      ],
+      "package": "com.dustinkarl.eas_mobile",
+      "googleServicesFile": "./google-services.json",
+      "minSdkVersion": 21,
+      "targetSdkVersion": 33
+    },
+    "web": {
+      "favicon": "./Picture/cdm_logo.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app needs access to your photos to allow image selection and upload.",
+          "cameraPermission": "The app needs access to your camera to take photos.",
+          "enableImagesPermission": true
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "804c2127-8592-4628-8b3a-610deb21a46d"
+      }
+    },
+    "entryPoint": "./index.js"
+  }
+}
