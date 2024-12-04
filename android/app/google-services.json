@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "621986702779",
+    "project_id": "easdb-7b6e4",
+    "storage_bucket": "easdb-7b6e4.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:621986702779:android:97fd339c5f61467fb5909e",
+        "android_client_info": {
+          "package_name": "com.dustinkarl.eas_mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "621986702779-sudc8rf3or3b6ddave5qbdvommj2q5um.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCg2igSlc632hj5I5YLywUzvDfV3HEza28"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "621986702779-sudc8rf3or3b6ddave5qbdvommj2q5um.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
