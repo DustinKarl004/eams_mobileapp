@@ -261,6 +261,8 @@ const styles = StyleSheet.create({
   logo: {
     width: 70,
     height: 70,
+    marginRight: 10,
+    marginTop: 20,
     resizeMode: 'contain',
   },
   scrollContent: {
