@@ -36,21 +36,25 @@ const NotificationScreen = ({ navigation }) => {
 
           if (notificationSnap.exists()) {
             const notificationData = notificationSnap.data();
-            // Remove duplicates keeping only latest
-            const uniqueNotifications = notificationData.list.reduce((acc, current) => {
-              const x = acc.find(item => item.category === current.category);
-              if (!x) {
-                return acc.concat([current]);
-              } else if (new Date(current.timestamp) > new Date(x.timestamp)) {
-                return acc.map(item => item.category === current.category ? current : item);
-              }
-              return acc;
-            }, []);
             
-            // Sort by timestamp
+            // Create a map to store latest notifications by category
+            const latestNotifications = new Map();
+            
+            // Iterate through notifications and keep only latest per category
+            notificationData.list.forEach(notification => {
+              const existingNotif = latestNotifications.get(notification.category);
+              
+              if (!existingNotif || new Date(notification.timestamp) > new Date(existingNotif.timestamp)) {
+                latestNotifications.set(notification.category, notification);
+              }
+            });
+
+            // Convert map values back to array and sort by timestamp
+            const uniqueNotifications = Array.from(latestNotifications.values());
             const sortedNotifications = uniqueNotifications.sort((a, b) => 
               new Date(b.timestamp) - new Date(a.timestamp)
             );
+
             setNotifications(sortedNotifications);
           }
           
@@ -72,16 +76,39 @@ const NotificationScreen = ({ navigation }) => {
         const notificationSnap = await getDoc(notificationRef);
 
         if (notificationSnap.exists()) {
-          const updatedList = notificationSnap.data().list.map(notification => ({
-            ...notification,
-            status: 'read'
-          }));
-
-          await setDoc(notificationRef, {
-            list: updatedList
+          const notificationData = notificationSnap.data();
+          
+          // Create a map to store latest notifications by category
+          const latestNotifications = new Map();
+          
+          // Iterate through notifications and keep only latest per category
+          notificationData.list.forEach(notification => {
+            const existingNotif = latestNotifications.get(notification.category);
+            
+            if (!existingNotif || new Date(notification.timestamp) > new Date(existingNotif.timestamp)) {
+              latestNotifications.set(notification.category, {
+                ...notification,
+                status: 'read'
+              });
+            }
           });
 
-          setNotifications(updatedList);
+          // Convert map values back to array
+          const uniqueNotifications = Array.from(latestNotifications.values());
+          
+          // Sort by timestamp
+          const sortedNotifications = uniqueNotifications.sort((a, b) => 
+            new Date(b.timestamp) - new Date(a.timestamp)
+          );
+
+          await setDoc(notificationRef, {
+            list: notificationData.list.map(notification => ({
+              ...notification,
+              status: 'read'
+            }))
+          });
+
+          setNotifications(sortedNotifications);
         }
       } catch (error) {
         console.error('Failed to mark notifications as read:', error);
@@ -113,7 +140,12 @@ const NotificationScreen = ({ navigation }) => {
           };
 
           await setDoc(notificationRef, {
-            list: updatedList
+            list: notificationSnap.data().list.map(n => {
+              if (n.timestamp === notification.timestamp && n.category === notification.category) {
+                return { ...n, status: 'read' };
+              }
+              return n;
+            })
           });
 
           setNotifications(updatedList);

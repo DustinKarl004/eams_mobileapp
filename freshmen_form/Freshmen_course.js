@@ -76,14 +76,15 @@ const FreshmenCourse = () => {
   };
 
   const courses = [
-    { code: 'BSCPE', name: 'Bachelor of Science in Computer Engineering' },
     { code: 'BSIT', name: 'Bachelor of Science in Information Technology' },
-    { code: 'BSE', name: 'Bachelor of Science in Entrepreneurship' },
-    { code: 'BSBA', name: 'Bachelor of Science in Business Administration Major in Human Resources Management' },
-    { code: 'BEED', name: 'Bachelor of Elementary Education Generalist' },
-    { code: 'BSED', name: 'Bachelor of Secondary Education Major in Science' },
-    { code: 'BECED', name: 'Bachelor of Early Childhood Education' },
-    { code: 'BTLED', name: 'Bachelor of Technology and Livelihood Education Major in Information Communication Technology' }
+    { code: 'BSCPE', name: 'Bachelor of Science in Computer Engineering' },
+    { code: 'BSEd-Sci', name: 'Bachelor of Secondary Education Major in Science' },
+    { code: 'BEEd-G', name: 'Bachelor of Elementary Education Generalist' },
+    { code: 'BECEd', name: 'Bachelor of Early Childhood Education' },
+    { code: 'BTLEd-ICT', name: 'Bachelor of Technology and Livelihood Education Major in Information Communication Technology' },
+    { code: 'TCP', name: 'Teacher Certificate Program' },
+    { code: 'BSBA-HRM', name: 'Bachelor of Science in Business Administration Major in Human Resources Management' },
+    { code: 'BSEntrep', name: 'Bachelor of Science in Entrepreneurship' }
   ];
 
   const isDisabled = (courseCode, choice) => {
@@ -331,7 +332,8 @@ const styles = StyleSheet.create({
   },
   courseCode: {
     flex: 1,
-    marginLeft: 15,
+    marginLeft: 10,
+    fontSize: 12,
     fontWeight: 'bold',
     color: '#333333',
   },
