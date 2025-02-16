@@ -61,7 +61,7 @@ const FreshmenScreen = () => {
         if (freshmenComplete) {
           setIsFreshmen(true);
           setIsComplete(true);
-          setCanProceed(true);
+          setCanProceed(false);
           setError(
             <View style={[styles.enhancedStatusContainer, { backgroundColor: '#004b23' }]}>
               <View style={styles.statusIconContainer}>

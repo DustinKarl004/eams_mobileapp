@@ -102,7 +102,7 @@ const TransfereeScreen = () => {
           if (transfereeComplete) {
             setIsTransferee(true);
             setIsComplete(true);
-            setCanProceed(true);
+            setCanProceed(false);
             setError(
               <View style={[styles.enhancedStatusContainer, { backgroundColor: '#004b23' }]}>
                 <View style={styles.statusIconContainer}>
