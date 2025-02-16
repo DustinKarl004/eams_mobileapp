@@ -17,6 +17,9 @@ const FreshmenProofofResidency = () => {
   const [documentType, setDocumentType] = useState('');
   const [documentTypeOptions] = useState(['Parents Valid ID', 'PSA', 'Barangay Clearance', 'Utility Bill']);
   const [isLoading, setIsLoading] = useState(false);
+  const [confirmationModalVisible, setConfirmationModalVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagesConfirmed, setImagesConfirmed] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -65,9 +68,20 @@ const FreshmenProofofResidency = () => {
       });
 
       if (!result.canceled) {
-        setSelectedFiles(prevFiles => [...prevFiles, ...result.assets]);
-      } else {
-        console.log('User cancelled image picker');
+        const newImages = result.assets;
+        for (let image of newImages) {
+          setSelectedImage(image);
+          setConfirmationModalVisible(true);
+          // Wait for user confirmation before proceeding to next image
+          await new Promise(resolve => {
+            const unsubscribe = setInterval(() => {
+              if (!confirmationModalVisible) {
+                clearInterval(unsubscribe);
+                resolve();
+              }
+            }, 100);
+          });
+        }
       }
     } catch (error) {
       console.error('Error selecting files:', error);
@@ -75,7 +89,33 @@ const FreshmenProofofResidency = () => {
     }
   };
 
+  const handleConfirmImage = () => {
+    if (selectedImage) {
+      setSelectedFiles(prevFiles => [...prevFiles, selectedImage]);
+    }
+    setConfirmationModalVisible(false);
+    setSelectedImage(null);
+  };
+
+  const handleRejectImage = () => {
+    setConfirmationModalVisible(false);
+    setSelectedImage(null);
+    Alert.alert('Image Rejected', 'Please select a clearer image with good quality.');
+  };
+
+  const handleConfirmAllImages = () => {
+    if (selectedFiles.length > 0) {
+      setImagesConfirmed(true);
+      Alert.alert('Images Confirmed', 'All selected images have been confirmed as good quality.');
+    }
+  };
+
   const handleNextPress = async () => {
+    if (!imagesConfirmed) {
+      Alert.alert('Confirmation Required', 'Please confirm that all images are of good quality before proceeding.');
+      return;
+    }
+
     if (selectedFiles.length === 0 || !documentType) {
       Alert.alert('Missing Information', 'Please select a document type and at least one file for proof of residency.');
       return;
@@ -93,13 +133,13 @@ const FreshmenProofofResidency = () => {
 
       const applicantData = {
         proof_of_residency: {
-        files_count: selectedFiles.length,
-        file_urls: uploadedFiles.map(file => file.downloadURL),
-        file_urls_fetch: uploadedFiles.map(file => ({
-          uri: file.uri,
-          name: file.name,
-          type: file.type
-        })),
+          files_count: selectedFiles.length,
+          file_urls: uploadedFiles.map(file => file.downloadURL),
+          file_urls_fetch: uploadedFiles.map(file => ({
+            uri: file.uri,
+            name: file.name,
+            type: file.type
+          })),
           document_type: documentType,
         }
       };
@@ -119,6 +159,7 @@ const FreshmenProofofResidency = () => {
             onPress: () => {
               setSelectedFiles([]);
               setDocumentType('');
+              setImagesConfirmed(false);
             }
           }
         ]
@@ -135,7 +176,7 @@ const FreshmenProofofResidency = () => {
       const fileName = file.uri.split('/').pop();
       const fileExtension = fileName.split('.').pop().toLowerCase();
     
-      let mimeType = 'application/octet-stream'; // default MIME type
+      let mimeType = 'application/octet-stream';
       if (fileExtension === 'png') mimeType = 'image/png';
       else if (fileExtension === 'jpg' || fileExtension === 'jpeg') mimeType = 'image/jpeg';
     
@@ -154,10 +195,11 @@ const FreshmenProofofResidency = () => {
     }
   };
 
-  const isFormValid = selectedFiles.length > 0 && documentType !== '';
+  const isFormValid = selectedFiles.length > 0 && documentType !== '' && imagesConfirmed;
 
   const handleRemoveFile = (index) => {
     setSelectedFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
+    setImagesConfirmed(false);
   };
 
   const renderItem = ({ item }) => {
@@ -179,6 +221,14 @@ const FreshmenProofofResidency = () => {
             <Text style={styles.inputDescription}>
               Note: The document must reflect the full address and the name must reflect self, parent, or legal guardian.
             </Text>
+
+            <View style={styles.instructionsContainer}>
+              <Text style={styles.instructionsTitle}>Important Instructions:</Text>
+              <Text style={styles.instructionText}>1. Ensure all text in the document is clearly readable</Text>
+              <Text style={styles.instructionText}>2. Make sure the entire document is visible in the frame</Text>
+              <Text style={styles.instructionText}>3. Avoid blurry or dark images</Text>
+              <Text style={styles.instructionText}>4. File must be in JPG, JPEG, or PNG format</Text>
+            </View>
 
             <TouchableOpacity style={styles.selectButton} onPress={() => setModalVisible(true)}>
               <Text style={[styles.selectButtonText, !documentType && styles.placeholderText]}>
@@ -215,6 +265,15 @@ const FreshmenProofofResidency = () => {
                 keyExtractor={(item, index) => index.toString()}
               />
             </View>
+
+            {selectedFiles.length > 0 && !imagesConfirmed && (
+              <TouchableOpacity 
+                style={styles.confirmImagesButton} 
+                onPress={handleConfirmAllImages}
+              >
+                <Text style={styles.confirmImagesText}>Confirm Image Quality</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       );
@@ -294,6 +353,43 @@ const FreshmenProofofResidency = () => {
             >
               <Text style={styles.closeButtonText}>Close</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={confirmationModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setConfirmationModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.imageConfirmationModal}>
+            <Text style={styles.modalTitle}>Confirm Image Quality</Text>
+            {selectedImage && (
+              <Image 
+                source={{ uri: selectedImage.uri }} 
+                style={styles.previewImage}
+                resizeMode="contain"
+              />
+            )}
+            <Text style={styles.confirmationText}>
+              Is this image clear and readable?
+            </Text>
+            <View style={styles.confirmationButtons}>
+              <TouchableOpacity
+                style={[styles.confirmButton, styles.acceptButton]}
+                onPress={handleConfirmImage}
+              >
+                <Text style={styles.confirmButtonText}>Yes, Accept</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmButton, styles.rejectButton]}
+                onPress={handleRejectImage}
+              >
+                <Text style={styles.confirmButtonText}>No, Reject</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -379,6 +475,24 @@ const styles = StyleSheet.create({
     color: '#666666',
     marginBottom: 5,
     fontStyle: 'italic',
+  },
+  instructionsContainer: {
+    backgroundColor: '#E8F5E9',
+    padding: 15,
+    borderRadius: 8,
+    marginVertical: 10,
+  },
+  instructionsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#004b23',
+    marginBottom: 8,
+  },
+  instructionText: {
+    fontSize: 14,
+    color: '#333333',
+    marginBottom: 4,
+    paddingLeft: 15,
   },
   requiredAsterisk: {
     color: '#FF0000',
@@ -503,6 +617,47 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5,
   },
+  imageConfirmationModal: {
+    width: '90%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+  },
+  previewImage: {
+    width: '100%',
+    height: 300,
+    marginVertical: 20,
+    borderRadius: 10,
+  },
+  confirmationText: {
+    fontSize: 18,
+    color: '#333333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  confirmationButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+  },
+  confirmButton: {
+    padding: 15,
+    borderRadius: 8,
+    width: '45%',
+  },
+  acceptButton: {
+    backgroundColor: '#004b23',
+  },
+  rejectButton: {
+    backgroundColor: '#FF6347',
+  },
+  confirmButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
   modalTitle: {
     fontSize: 24,
     fontWeight: '700',
@@ -538,6 +693,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  confirmImagesButton: {
+    backgroundColor: '#FFA500',
+    padding: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  confirmImagesText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

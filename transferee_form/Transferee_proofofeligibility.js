@@ -14,6 +14,9 @@ const TransfereeProofOfEligibility = () => {
   const [isPressed, setIsPressed] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [confirmationModalVisible, setConfirmationModalVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagesConfirmed, setImagesConfirmed] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -59,9 +62,20 @@ const TransfereeProofOfEligibility = () => {
       });
 
       if (!result.canceled) {
-        setSelectedFiles(prevFiles => [...prevFiles, ...result.assets]);
-      } else {
-        console.log('User cancelled image picker');
+        const newImages = result.assets;
+        for (let image of newImages) {
+          setSelectedImage(image);
+          setConfirmationModalVisible(true);
+          // Wait for user confirmation before proceeding to next image
+          await new Promise(resolve => {
+            const unsubscribe = setInterval(() => {
+              if (!confirmationModalVisible) {
+                clearInterval(unsubscribe);
+                resolve();
+              }
+            }, 100);
+          });
+        }
       }
     } catch (error) {
       console.error('Error selecting files:', error);
@@ -69,7 +83,33 @@ const TransfereeProofOfEligibility = () => {
     }
   };
 
+  const handleConfirmImage = () => {
+    if (selectedImage) {
+      setSelectedFiles(prevFiles => [...prevFiles, selectedImage]);
+    }
+    setConfirmationModalVisible(false);
+    setSelectedImage(null);
+  };
+
+  const handleRejectImage = () => {
+    setConfirmationModalVisible(false);
+    setSelectedImage(null);
+    Alert.alert('Image Rejected', 'Please select a clearer image with good quality.');
+  };
+
+  const handleConfirmAllImages = () => {
+    if (selectedFiles.length > 0) {
+      setImagesConfirmed(true);
+      Alert.alert('Images Confirmed', 'All selected images have been confirmed as good quality.');
+    }
+  };
+
   const handleNextPress = async () => {
+    if (!imagesConfirmed) {
+      Alert.alert('Confirmation Required', 'Please confirm that all images are of good quality before proceeding.');
+      return;
+    }
+
     if (selectedFiles.length === 0) {
       Alert.alert('Missing Files', 'Please select at least one file for proof of eligibility.');
       return;
@@ -90,11 +130,11 @@ const TransfereeProofOfEligibility = () => {
           files_count: selectedFiles.length,
           file_urls: uploadedFiles.map(file => file.downloadURL),
           file_urls_fetch: uploadedFiles.map(file => ({
-          uri: file.uri,
-          type: file.type,
-          name: file.name
-        })),
-      }
+            uri: file.uri,
+            type: file.type,
+            name: file.name
+          })),
+        }
       };
 
       await setDoc(doc(db, 'transferee_applicant_form', userEmail), applicantData, { merge: true });
@@ -111,6 +151,7 @@ const TransfereeProofOfEligibility = () => {
             text: 'OK',
             onPress: () => {
               setSelectedFiles([]);
+              setImagesConfirmed(false);
             }
           }
         ]
@@ -124,24 +165,24 @@ const TransfereeProofOfEligibility = () => {
       const response = await fetch(file.uri);
       const blob = await response.blob();
     
-    const fileName = file.uri.split('/').pop();
-    const fileExtension = fileName.split('.').pop().toLowerCase();
-  
-    let mimeType = 'application/octet-stream'; // default MIME type
-    if (fileExtension === 'png') mimeType = 'image/png';
-    else if (fileExtension === 'jpg' || fileExtension === 'jpeg') mimeType = 'image/jpeg';
-  
-    const storageRef = ref(storage, `uploads/transferee_proof_of_eligibility/${userEmail}/${fileName}`);
+      const fileName = file.uri.split('/').pop();
+      const fileExtension = fileName.split('.').pop().toLowerCase();
     
-    const metadata = {
-      contentType: mimeType,
-    };
-  
-    await uploadBytes(storageRef, blob, metadata);
-    const downloadURL = await getDownloadURL(storageRef);
-    return { uri: file.uri, name: fileName, type: mimeType, downloadURL };
-  } catch (error) {
-    console.error('Error uploading file:', error);
+      let mimeType = 'application/octet-stream';
+      if (fileExtension === 'png') mimeType = 'image/png';
+      else if (fileExtension === 'jpg' || fileExtension === 'jpeg') mimeType = 'image/jpeg';
+    
+      const storageRef = ref(storage, `uploads/transferee_proof_of_eligibility/${userEmail}/${fileName}`);
+      
+      const metadata = {
+        contentType: mimeType,
+      };
+    
+      await uploadBytes(storageRef, blob, metadata);
+      const downloadURL = await getDownloadURL(storageRef);
+      return { uri: file.uri, name: fileName, type: mimeType, downloadURL };
+    } catch (error) {
+      console.error('Error uploading file:', error);
       throw error;
     }
   };
@@ -212,6 +253,15 @@ const TransfereeProofOfEligibility = () => {
                 keyExtractor={(item, index) => index.toString()}
               />
             </View>
+
+            {selectedFiles.length > 0 && !imagesConfirmed && (
+              <TouchableOpacity 
+                style={styles.confirmImagesButton}
+                onPress={handleConfirmAllImages}
+              >
+                <Text style={styles.confirmImagesText}>Confirm All Images</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       );
@@ -219,7 +269,7 @@ const TransfereeProofOfEligibility = () => {
     return null;
   };
 
-  const isFormValid = selectedFiles.length > 0;
+  const isFormValid = selectedFiles.length > 0 && imagesConfirmed;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -253,7 +303,7 @@ const TransfereeProofOfEligibility = () => {
               colors={isFormValid ? (isPressed ? ['#003b1c', '#004b23'] : ['#004b23', '#003b1c']) : ['#cccccc', '#b3b3b3']}
               style={styles.gradient}
             >
-             {isLoading ? (
+              {isLoading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <>
@@ -261,11 +311,47 @@ const TransfereeProofOfEligibility = () => {
                   <Ionicons name="chevron-forward" size={24} color="#FFFFFF" />
                 </>
               )}
-            
             </LinearGradient>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={confirmationModalVisible}
+        onRequestClose={() => setConfirmationModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.imageConfirmationModal}>
+            <Text style={styles.modalTitle}>Confirm Image Quality</Text>
+            {selectedImage && (
+              <Image 
+                source={{ uri: selectedImage.uri }}
+                style={styles.previewImage}
+                resizeMode="contain"
+              />
+            )}
+            <Text style={styles.confirmationText}>
+              Is this image clear and readable?
+            </Text>
+            <View style={styles.confirmationButtons}>
+              <TouchableOpacity
+                style={[styles.confirmButton, styles.acceptButton]}
+                onPress={handleConfirmImage}
+              >
+                <Text style={styles.confirmButtonText}>Yes, Accept</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmButton, styles.rejectButton]}
+                onPress={handleRejectImage}
+              >
+                <Text style={styles.confirmButtonText}>No, Reject</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {isLoading && (
         <View style={styles.loadingOverlay}>
@@ -464,6 +550,72 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  imageConfirmationModal: {
+    width: '90%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+  },
+  previewImage: {
+    width: '100%',
+    height: 300,
+    marginVertical: 20,
+    borderRadius: 10,
+  },
+  confirmationText: {
+    fontSize: 18,
+    color: '#333333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  confirmationButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+  },
+  confirmButton: {
+    padding: 15,
+    borderRadius: 8,
+    width: '45%',
+  },
+  acceptButton: {
+    backgroundColor: '#004b23',
+  },
+  rejectButton: {
+    backgroundColor: '#FF6347',
+  },
+  confirmButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#004b23',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  confirmImagesButton: {
+    backgroundColor: '#FFA500',
+    padding: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  confirmImagesText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
